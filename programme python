@@ -1,0 +1,54 @@
+import cv2
+import numpy as np
+
+# Charger le modèle pré-entraîné de détection de visage
+face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+# Charger le modèle pré-entraîné de reconnaissance d'expression faciale
+model = cv2.dnn.readNetFromCaffe('deploy.prototxt', 'res10_300x300_ssd_iter_140000.caffemodel')
+
+# Les expressions faciales prises en charge
+emotions = ['angry', 'disgusted', 'fearful', 'happy', 'neutral', 'sad', 'surprised']
+
+# Capturer une image depuis la webcam
+cap = cv2.VideoCapture(0)
+
+while True:
+    # Lire une nouvelle frame
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Convertir la frame en gris
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Détecter les visages dans la frame
+    faces = face_detector.detectMultiScale(gray, 1.3, 5)
+
+    # Boucle sur chaque visage détecté
+    for (x, y, w, h) in faces:
+        # Dessiner un rectangle autour du visage
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        # Extraire le visage de la frame
+        face_img = frame[y:y + h, x:x + w].copy()
+
+        # Redimensionner l'image pour le modèle de reconnaissance d'expression faciale
+        blob = cv2.dnn.blobFromImage(face_img, 1, (224, 224), (104, 117, 123))
+
+        # Feed le blob dans le modèle
+        model.setInput(blob)
+
+        # Obtenir les scores d'expression faciale pour chaque émotion
+        scores = model.forward()[0]
+
+        # Trouver l'index de l'émotion avec le score le plus élevé
+        max_index = np.argmax(scores)
+
+        # Afficher le nom de l'émotion sur la frame
+        cv2.putText(frame, emotions[max_index], (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+
+    # Afficher la frame
+    cv2.imshow('Facial Expression Detection', frame)
+
+    # Sortir si
